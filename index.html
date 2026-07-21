@@ -111,7 +111,7 @@
   }
   #tab-all.active{background:var(--badge);color:var(--ink);}
 
-  /* Sommario card, bottom-left over map - Ottimizzato per evitare sovrapposizioni */
+  /* Sommario card, bottom-left over map */
   #card{
     position:absolute;
     left:16px; bottom:16px;
@@ -181,16 +181,6 @@
   .card-attractions li {
     margin-bottom: 3px;
   }
-  .card-img-preview {
-    width: 100%;
-    height: auto;
-    max-height: 100px;
-    object-fit: cover;
-    border: 1.5px solid var(--ink);
-    margin-bottom: 6px;
-    display: block;
-    background: #fff;
-  }
 
   .leaflet-popup-content-wrapper{border-radius:0;border:2px solid var(--ink);box-shadow:3px 3px 0 var(--ink);}
   .leaflet-popup-content{font-family:'Inter',sans-serif;font-size:12.5px;margin:10px 12px;}
@@ -246,7 +236,6 @@ const DAYS = [
   {
     n:1, title:"Vicopisano → Antibes", km:400, region:"Costa Azzurra",
     desc:"Trasferimento lungo la costa toccando Varigotti e Mentone per raggiungere Antibes.",
-    img:"Tappa G1.png",
     attractions:[
       "Varigotti & Capo Noli: La vecchia via Aurelia regala pareti calcaree a strapiombo sul mare.",
       "Mentone & Costa Azzurra: Microclima ideale per i limoni locali. Da provare la Socca.",
@@ -262,7 +251,6 @@ const DAYS = [
   {
     n:2, title:"Antibes → Verdon → Malaucène", km:313, region:"Alta Provenza",
     desc:"Curve nel Verdon tra Comps-sur-Artuby e Aiguines, poi scalata del Mont Ventoux.",
-    img:"Tappa G2.png",
     attractions:[
       "Gorges du Verdon: Il canyon più profondo d'Europa con acque smeraldo.",
       "Moustiers-Sainte-Marie: Borgo tra due rupi, famoso per le maioliche.",
@@ -279,7 +267,6 @@ const DAYS = [
   {
     n:3, title:"Malaucène → Ardèche → Aurillac", km:340, region:"Ardèche & Cantal",
     desc:"Canyon dell'Ardèche e Pont d'Arc, risalendo verso il Massiccio Centrale.",
-    img:"Tappa G3.png",
     attractions:[
       "Gorges de l'Ardèche & Pont d'Arc: Arco di roccia naturale alto 54 metri.",
       "Viadotto di Garabit: Monumentale opera ferroviaria in ferro battuto di Eiffel.",
@@ -295,7 +282,6 @@ const DAYS = [
   {
     n:4, title:"Aurillac → Dordogna → Bordeaux", km:310, region:"Périgord Nero",
     desc:"Beaulieu, Creysse, Souillac, Sarlat, La Roque-Gageac e Les Eyzies prima di Bordeaux.",
-    img:"Tappa G4.png",
     attractions:[
       "Valle della Dordogna & La Roque-Gageac: Borgo in falesia, patria del Foie Gras.",
       "Sarlat-la-Canéda: Cittadina medievale con tetti in pietra.",
@@ -314,7 +300,6 @@ const DAYS = [
   {
     n:5, title:"Bordeaux → Cap Ferret → San Sebastián", km:290, region:"Arcachon & Paesi Baschi",
     desc:"Deviazione a Cap Ferret e Dune du Pilat, poi confine spagnolo verso San Sebastián.",
-    img:"Tappa G5.png",
     attractions:[
       "Cap Ferret & Bacino d'Arcachon: Pinete e la vicina Dune du Pilat.",
       "Ostriche di L'Herbe: Sosta d'autore nei capanni dei pescatori.",
@@ -329,7 +314,6 @@ const DAYS = [
   {
     n:6, title:"San Sebastián → Urbasa → Pamplona", km:235, region:"Interno Navarra",
     desc:"Passo di Lizarrusti, altopiano di Urbasa, sosta a Estella prima di Pamplona.",
-    img:"Tappa G6.png",
     attractions:[
       "Passo di Lizarrusti & Urbasa: Boschi di faggi e formaggio Idiazabal.",
       "Estella-Lizarra: Architettura romanica e Cammino di Santiago.",
@@ -346,7 +330,6 @@ const DAYS = [
   {
     n:7, title:"Pamplona → Jaca → Aínsa", km:285, region:"Aragona (no autostrada)",
     desc:"Foz de Arbayún, Cittadella di Jaca e Puerto de Cotefablo fino ad Aínsa.",
-    img:"Tappa G7.png",
     attractions:[
       "Foz de Arbayún: Gola calcarea profonda e regno dei grifoni.",
       "Jaca: Fortezza pentagonale e agnello al forno Ternasco de Aragón.",
@@ -363,7 +346,6 @@ const DAYS = [
   {
     n:8, title:"Aínsa → Vielha → Puigcerdà", km:245, region:"Grandi valichi Pirenaici — Maratona",
     desc:"Collada de Fadas, Tunnel di Vielha, Port de la Bonaigua (2072m) e Sort.",
-    img:"Tappa G8.png",
     attractions:[
       "Collada de Fadas: Curve perfette e formaggio di Benasque.",
       "Val d'Aran & Vielha: Architettura in ardesia e zuppa Òlha Aranesa.",
@@ -381,7 +363,6 @@ const DAYS = [
   {
     n:9, title:"Puigcerdà → Ripoll → Barcellona", km:180, region:"Discesa sulla costa",
     desc:"Discesa dai Pirenei orientali passando per Ripoll fino a Barcellona.",
-    img:"Tappa G9.png",
     attractions:[
       "Ripoll: Monastero di Santa Maria e insaccati tradizionali.",
       "Barcellona: Metropoli mediterranea ideale per gustare Tapas."
@@ -395,7 +376,6 @@ const DAYS = [
   {
     n:10, title:"Barcellona → Civitavecchia", km:0, region:"Rientro via nave",
     desc:"Giornata libera a Barcellona, imbarco serale per Civitavecchia.",
-    img:"preventivo nave.png",
     attractions:[
       "Dettagli traghetto: Barcellona ➔ Civitavecchia.",
       "Sistemazione: Cabina interna uso esclusivo e imbarco per 2 moto."
@@ -414,7 +394,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
   maxZoom: 18
 }).addTo(map);
 
-let dayLayers = {};
+let dayLayers = {}; 
 let allBounds = [];
 
 function markerIcon(label, cls){
@@ -484,7 +464,7 @@ function showAll(){
   }
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('tab-all').classList.add('active');
- 
+  
   let overviewPinsHtml = '<div style="position:relative; width:100%; border:1.5px solid var(--ink); margin-bottom:6px; background:var(--paper-dim); padding:4px; text-align:center;"><span style="font-family:\'Oswald\',sans-serif; font-size:9.5px; text-transform:uppercase; display:block; margin-bottom:3px; color:var(--ink);">Indice Tappe</span><div style="display:flex; flex-wrap:wrap; gap:3px; justify-content:center;">';
   DAYS.forEach(d => {
     overviewPinsHtml += `<button onclick="showDay(DAYS[${d.n - 1}]); document.getElementById('tab-${d.n}').scrollIntoView({behavior:'smooth'});" style="background:var(--paper); border:1px solid var(--ink); padding:1px 5px; font-family:\'Oswald\',sans-serif; font-size:9.5px; font-weight:bold; cursor:pointer;">G${d.n}</button>`;
@@ -520,7 +500,6 @@ function showDay(day){
   let attractionsHtml = '';
   if(day.attractions && day.attractions.length > 0){
     attractionsHtml = `
-      <img src="${day.img}" alt="Tappa G${day.n}" class="card-img-preview">
       <div class="card-section-title">Geografia e Sapori</div>
       <ul class="card-attractions">
         ${day.attractions.map(a => `<li>${a}</li>`).join('')}
@@ -556,4 +535,4 @@ async function init(){
 init();
 </script>
 </body>
-</html> 
+</html>

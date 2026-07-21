@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Raid Moto 2026 — Sommario Itinerario</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B2A32;
+    --paper:#EDE6D6;
+    --paper-dim:#E1D8C4;
+    --route-active:#C2542D;
+    --route-done:#8A9A8E;
+    --route-idle:#C7BFA9;
+    --badge:#E8A33D;
+    --line:rgba(27,42,50,0.14);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;background:var(--ink);font-family:'Inter',sans-serif;color:var(--ink);}
+  #app{position:relative;width:100%;height:100vh;min-height:520px;display:flex;flex-direction:column;}
+
+  /* Header strip */
+  #head{
+    background:var(--ink);
+    color:var(--paper);
+    padding:14px 18px 12px;
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:6px 16px;
+    border-bottom:3px solid var(--badge);
+    z-index:5;
+  }
+  #head h1{
+    font-family:'Oswald',sans-serif;
+    font-weight:700;
+    font-size:clamp(16px,2.6vw,22px);
+    letter-spacing:0.03em;
+    text-transform:uppercase;
+    margin:0;
+  }
+  #head .meta{
+    font-family:'Oswald',sans-serif;
+    font-size:12px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--badge);
+    opacity:0.95;
+  }
+
+  /* Main layout: map + rally tab strip */
+  #main{position:relative;flex:1;display:flex;min-height:0;}
+  #map{flex:1;min-width:0;position:relative;isolation:isolate;}
+
+  #tabs{
+    width:64px;
+    background:var(--paper);
+    border-left:3px solid var(--ink);
+    overflow-y:auto;
+    z-index:50;
+    display:flex;
+    flex-direction:column;
+  }
+  .tab{
+    position:relative;
+    padding:8px 4px 9px;
+    text-align:center;
+    cursor:pointer;
+    border-bottom:1px solid var(--line);
+    background:var(--paper);
+    transition:background .15s ease;
+  }
+  .tab:hover{background:var(--paper-dim);}
+  .tab .num{
+    font-family:'Oswald',sans-serif;
+    font-weight:700;
+    font-size:15px;
+    line-height:1;
+  }
+  .tab .km{
+    font-size:9px;
+    letter-spacing:0.03em;
+    color:#5b6a63;
+    margin-top:3px;
+    display:block;
+  }
+  .tab.active{background:var(--route-active);}
+  .tab.active .num{color:var(--paper);}
+  .tab.active .km{color:rgba(237,230,214,0.85);}
+  .tab .swatch{
+    position:absolute; left:0; top:0; bottom:0; width:4px;
+    background:var(--route-idle);
+  }
+  .tab.done .swatch{background:var(--route-done);}
+  .tab.active .swatch{background:var(--badge);}
+  #tab-all{
+    font-family:'Oswald',sans-serif;
+    font-weight:600;
+    font-size:10.5px;
+    letter-spacing:0.04em;
+    text-align:center;
+    padding:10px 4px;
+    background:var(--ink);
+    color:var(--paper);
+    cursor:pointer;
+    border-bottom:3px solid var(--badge);
+  }
+  #tab-all.active{background:var(--badge);color:var(--ink);}
+
+  /* Sommario card, bottom-left over map - Ottimizzato per evitare sovrapposizioni */
+  #card{
+    position:absolute;
+    left:16px; bottom:16px;
+    width: 320px;
+    max-width: calc(100vw - 110px);
+    max-height: calc(100vh - 140px);
+    overflow-y: auto;
+    background:var(--paper);
+    border:2px solid var(--ink);
+    box-shadow:4px 4px 0 var(--ink);
+    z-index:60;
+    padding:12px 14px 13px;
+  }
+  #card .eyebrow{
+    font-family:'Oswald',sans-serif;
+    font-size:10.5px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--route-active);
+    font-weight:600;
+  }
+  #card h2{
+    font-family:'Oswald',sans-serif;
+    font-size:17px;
+    margin:2px 0 5px;
+    line-height:1.15;
+  }
+  #card p{
+    font-size:12px;
+    line-height:1.4;
+    margin:0 0 6px;
+    color:#333;
+  }
+  #card .stats{
+    display:flex;
+    gap:12px;
+    font-family:'Oswald',sans-serif;
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+    border-top:1px solid var(--line);
+    padding-top:7px;
+    margin-top: 8px;
+  }
+  #card .stats b{display:block;font-size:14px;letter-spacing:0;}
+
+  /* Sezioni interne al sommario */
+  .card-section-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--route-active);
+    font-weight: 600;
+    margin-top: 8px;
+    margin-bottom: 3px;
+    border-top: 1px solid var(--line);
+    padding-top: 6px;
+  }
+  .card-attractions {
+    font-size: 11.5px;
+    line-height: 1.4;
+    color: #333;
+    margin: 0 0 8px 0;
+    padding-left: 12px;
+  }
+  .card-attractions li {
+    margin-bottom: 3px;
+  }
+  .card-img-preview {
+    width: 100%;
+    height: auto;
+    max-height: 100px;
+    object-fit: cover;
+    border: 1.5px solid var(--ink);
+    margin-bottom: 6px;
+    display: block;
+    background: #fff;
+  }
+
+  .leaflet-popup-content-wrapper{border-radius:0;border:2px solid var(--ink);box-shadow:3px 3px 0 var(--ink);}
+  .leaflet-popup-content{font-family:'Inter',sans-serif;font-size:12.5px;margin:10px 12px;}
+  .leaflet-popup-content b{font-family:'Oswald',sans-serif;}
+  .leaflet-popup-tip{display:none;}
+
+  .day-marker{
+    width:26px;height:26px;border-radius:50%;
+    background:var(--route-idle);
+    border:2.5px solid var(--ink);
+    color:var(--ink);
+    font-family:'Oswald',sans-serif;font-weight:700;font-size:11px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .day-marker.stop{background:var(--badge);}
+  .day-marker.active-marker{background:var(--route-active);color:var(--paper);}
+
+  @media (max-width:560px){
+    #tabs{width:46px;}
+    .tab .num{font-size:13px;}
+    .tab .km{font-size:8px;}
+    #card{left:8px;right:60px;bottom:8px;width:auto;max-width:none;}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="head">
+    <h1>Raid Francia &amp; Spagna 2026 — Sommario</h1>
+    <div class="meta">10 giorni · 2.628 km · Vicopisano → Barcellona</div>
+  </div>
+  <div id="main">
+    <div id="map"></div>
+    <div id="tabs">
+      <div id="tab-all" class="active">TUTTO</div>
+    </div>
+    <div id="card">
+      <div class="eyebrow">Sommario Generale</div>
+      <h2>L'intero raid</h2>
+      <p>Seleziona un giorno dal menu laterale per evidenziare la singola tratta sulla mappa, oppure mantieni "TUTTO" per l'itinerario completo.</p>
+      <div class="stats">
+        <div><b>10</b>Giorni</div>
+        <div><b>2.628</b>Km totali</div>
+        <div><b>4</b>Regioni</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const DAYS = [
+  {
+    n:1, title:"Vicopisano → Antibes", km:400, region:"Costa Azzurra",
+    desc:"Trasferimento lungo la costa toccando Varigotti e Mentone per raggiungere Antibes.",
+    img:"Tappa G1.png",
+    attractions:[
+      "Varigotti & Capo Noli: La vecchia via Aurelia regala pareti calcaree a strapiombo sul mare.",
+      "Mentone & Costa Azzurra: Microclima ideale per i limoni locali. Da provare la Socca.",
+      "Antibes: Bastioni di Vauban e porto turistico tra i più grandi."
+    ],
+    stops:[
+      {name:"Vicopisano", lat:43.6986166, lng:10.5836492},
+      {name:"Varigotti & Capo Noli", lat:44.1822017, lng:8.4024378},
+      {name:"Mentone", lat:43.7743, lng:7.5038},
+      {name:"Antibes", lat:43.580418, lng:7.125102}
+    ]
+  },
+  {
+    n:2, title:"Antibes → Verdon → Malaucène", km:313, region:"Alta Provenza",
+    desc:"Curve nel Verdon tra Comps-sur-Artuby e Aiguines, poi scalata del Mont Ventoux.",
+    img:"Tappa G2.png",
+    attractions:[
+      "Gorges du Verdon: Il canyon più profondo d'Europa con acque smeraldo.",
+      "Moustiers-Sainte-Marie: Borgo tra due rupi, famoso per le maioliche.",
+      "Mont Ventoux (1912m): Il Gigante della Provenza con paesaggio lunare."
+    ],
+    stops:[
+      {name:"Antibes", lat:43.580418, lng:7.125102},
+      {name:"Comps-sur-Artuby", lat:43.7264, lng:6.5136},
+      {name:"Gorges du Verdon", lat:43.7613593, lng:6.3788372},
+      {name:"Mont Ventoux", lat:44.1740851, lng:5.2786797},
+      {name:"Malaucène", lat:44.1747, lng:5.1319}
+    ]
+  },
+  {
+    n:3, title:"Malaucène → Ardèche → Aurillac", km:340, region:"Ardèche & Cantal",
+    desc:"Canyon dell'Ardèche e Pont d'Arc, risalendo verso il Massiccio Centrale.",
+    img:"Tappa G3.png",
+    attractions:[
+      "Gorges de l'Ardèche & Pont d'Arc: Arco di roccia naturale alto 54 metri.",
+      "Viadotto di Garabit: Monumentale opera ferroviaria in ferro battuto di Eiffel.",
+      "Aurillac & Cantal: Alvernia vulcanica, celebre per il formaggio Cantal DOP."
+    ],
+    stops:[
+      {name:"Malaucène", lat:44.1747, lng:5.1319},
+      {name:"Gorges de l'Ardèche", lat:44.359428, lng:4.457053},
+      {name:"Viaduc de Garabit", lat:45.0994, lng:3.1706},
+      {name:"Aurillac", lat:44.9332083, lng:2.4482505}
+    ]
+  },
+  {
+    n:4, title:"Aurillac → Dordogna → Bordeaux", km:310, region:"Périgord Nero",
+    desc:"Beaulieu, Creysse, Souillac, Sarlat, La Roque-Gageac e Les Eyzies prima di Bordeaux.",
+    img:"Tappa G4.png",
+    attractions:[
+      "Valle della Dordogna & La Roque-Gageac: Borgo in falesia, patria del Foie Gras.",
+      "Sarlat-la-Canéda: Cittadina medievale con tetti in pietra.",
+      "Bordeaux: Capitale mondiale del vino e dei dolci Canelés."
+    ],
+    stops:[
+      {name:"Aurillac", lat:44.9332083, lng:2.4482505},
+      {name:"Beaulieu-sur-Dordogne", lat:44.9836, lng:1.8396},
+      {name:"Souillac", lat:44.8907, lng:1.4778},
+      {name:"Sarlat-la-Canéda", lat:44.890891, lng:1.217292},
+      {name:"La Roque-Gageac", lat:44.8286, lng:1.2044},
+      {name:"Les Eyzies", lat:44.9339, lng:1.0164},
+      {name:"Bordeaux", lat:44.8416106, lng:-0.5810938}
+    ]
+  },
+  {
+    n:5, title:"Bordeaux → Cap Ferret → San Sebastián", km:290, region:"Arcachon & Paesi Baschi",
+    desc:"Deviazione a Cap Ferret e Dune du Pilat, poi confine spagnolo verso San Sebastián.",
+    img:"Tappa G5.png",
+    attractions:[
+      "Cap Ferret & Bacino d'Arcachon: Pinete e la vicina Dune du Pilat.",
+      "Ostriche di L'Herbe: Sosta d'autore nei capanni dei pescatori.",
+      "San Sebastián: Pintxos nei vicoli della Parte Vieja sulla baia di La Concha."
+    ],
+    stops:[
+      {name:"Bordeaux", lat:44.8416106, lng:-0.5810938},
+      {name:"Cap Ferret", lat:44.6548704, lng:-1.2516627},
+      {name:"San Sebastián", lat:43.318237, lng:-1.9817051}
+    ]
+  },
+  {
+    n:6, title:"San Sebastián → Urbasa → Pamplona", km:235, region:"Interno Navarra",
+    desc:"Passo di Lizarrusti, altopiano di Urbasa, sosta a Estella prima di Pamplona.",
+    img:"Tappa G6.png",
+    attractions:[
+      "Passo di Lizarrusti & Urbasa: Boschi di faggi e formaggio Idiazabal.",
+      "Estella-Lizarra: Architettura romanica e Cammino di Santiago.",
+      "Pamplona: Plaza del Castillo e liquore Pacharán."
+    ],
+    stops:[
+      {name:"San Sebastián", lat:43.318237, lng:-1.9817051},
+      {name:"Tolosa", lat:43.1361, lng:-2.0731},
+      {name:"Puerto de Urbasa", lat:42.8386, lng:-2.1136},
+      {name:"Estella-Lizarra", lat:42.6714, lng:-2.0326},
+      {name:"Pamplona", lat:42.812526, lng:-1.6457745}
+    ]
+  },
+  {
+    n:7, title:"Pamplona → Jaca → Aínsa", km:285, region:"Aragona (no autostrada)",
+    desc:"Foz de Arbayún, Cittadella di Jaca e Puerto de Cotefablo fino ad Aínsa.",
+    img:"Tappa G7.png",
+    attractions:[
+      "Foz de Arbayún: Gola calcarea profonda e regno dei grifoni.",
+      "Jaca: Fortezza pentagonale e agnello al forno Ternasco de Aragón.",
+      "Puerto de Cotefablo & Aínsa: Borgo medievale alla confluenza di due fiumi."
+    ],
+    stops:[
+      {name:"Pamplona", lat:42.812526, lng:-1.6457745},
+      {name:"Foz de Arbayún", lat:42.6294, lng:-1.0603},
+      {name:"Jaca", lat:42.5717166, lng:-0.5470554},
+      {name:"Puerto de Cotefablo", lat:42.6425, lng:-0.2308},
+      {name:"Aínsa", lat:42.4146941, lng:0.1403811}
+    ]
+  },
+  {
+    n:8, title:"Aínsa → Vielha → Puigcerdà", km:245, region:"Grandi valichi Pirenaici — Maratona",
+    desc:"Collada de Fadas, Tunnel di Vielha, Port de la Bonaigua (2072m) e Sort.",
+    img:"Tappa G8.png",
+    attractions:[
+      "Collada de Fadas: Curve perfette e formaggio di Benasque.",
+      "Val d'Aran & Vielha: Architettura in ardesia e zuppa Òlha Aranesa.",
+      "Port de la Bonaigua (2072m): Passo d'alta quota spettacolare."
+    ],
+    stops:[
+      {name:"Aínsa", lat:42.4146941, lng:0.1403811},
+      {name:"Castejón de Sos", lat:42.5289, lng:0.5083},
+      {name:"Vielha", lat:42.7030823, lng:0.7933967},
+      {name:"Port de la Bonaigua", lat:42.6672, lng:0.9722},
+      {name:"Sort", lat:42.4131, lng:1.1300},
+      {name:"Puigcerdà", lat:42.4298825, lng:1.9296691}
+    ]
+  },
+  {
+    n:9, title:"Puigcerdà → Ripoll → Barcellona", km:180, region:"Discesa sulla costa",
+    desc:"Discesa dai Pirenei orientali passando per Ripoll fino a Barcellona.",
+    img:"Tappa G9.png",
+    attractions:[
+      "Ripoll: Monastero di Santa Maria e insaccati tradizionali.",
+      "Barcellona: Metropoli mediterranea ideale per gustare Tapas."
+    ],
+    stops:[
+      {name:"Puigcerdà", lat:42.4298825, lng:1.9296691},
+      {name:"Ripoll", lat:42.1994589, lng:2.1907618},
+      {name:"Barcellona", lat:41.3874374, lng:2.1686496}
+    ]
+  },
+  {
+    n:10, title:"Barcellona → Civitavecchia", km:0, region:"Rientro via nave",
+    desc:"Giornata libera a Barcellona, imbarco serale per Civitavecchia.",
+    img:"preventivo nave.png",
+    attractions:[
+      "Dettagli traghetto: Barcellona ➔ Civitavecchia.",
+      "Sistemazione: Cabina interna uso esclusivo e imbarco per 2 moto."
+    ],
+    ferry:true,
+    stops:[
+      {name:"Barcellona (porto)", lat:41.3733, lng:2.1775},
+      {name:"Civitavecchia (porto)", lat:42.0942, lng:11.7955}
+    ]
+  }
+];
+
+const map = L.map('map', {zoomControl:true}).setView([44.0, 3.5], 6);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; OpenStreetMap &copy; CARTO',
+  maxZoom: 18
+}).addTo(map);
+
+let dayLayers = {};
+let allBounds = [];
+
+function markerIcon(label, cls){
+  return L.divIcon({
+    className:'',
+    html:`<div class="day-marker ${cls||''}">${label}</div>`,
+    iconSize:[26,26],
+    iconAnchor:[13,13]
+  });
+}
+
+async function fetchRoute(stops){
+  const coords = stops.map(s=>`${s.lng},${s.lat}`).join(';');
+  try{
+    const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`);
+    const data = await res.json();
+    if(data.code === "Ok" && data.routes && data.routes[0]){
+      return data.routes[0].geometry.coordinates.map(c=>[c[1],c[0]]);
+    }
+  }catch(e){ }
+  return stops.map(s=>[s.lat,s.lng]);
+}
+
+async function buildDay(day){
+  const isFerry = !!day.ferry;
+  const latlngs = await fetchRoute(day.stops);
+  latlngs.forEach(p=>allBounds.push(p));
+
+  const line = L.polyline(latlngs, {
+    color: '#C7BFA9',
+    weight: 4,
+    opacity: 0.85,
+    dashArray: isFerry ? '2 10' : null
+  }).addTo(map);
+
+  const markers = day.stops.map((s,i)=>{
+    const isEndpoint = (i===0 || i===day.stops.length-1);
+    const m = L.marker([s.lat,s.lng], {
+      icon: markerIcon(isEndpoint ? day.n : '·', isEndpoint ? 'stop':'')
+    }).addTo(map);
+    m.bindPopup(`<b>${s.name}</b><br>Giorno ${day.n} — ${day.title}`);
+    return m;
+  });
+
+  dayLayers[day.n] = {line, markers};
+}
+
+function setDayColor(n, color, weight, opacity){
+  const l = dayLayers[n];
+  if(!l) return;
+  l.line.setStyle({color, weight, opacity});
+  l.markers.forEach(m=>{
+    const el = m.getElement();
+    if(!el) return;
+    const inner = el.querySelector('.day-marker');
+    if(inner){
+      inner.classList.remove('active-marker');
+      if(color === '#C2542D') inner.classList.add('active-marker');
+    }
+  });
+}
+
+function showAll(){
+  DAYS.forEach(d=>setDayColor(d.n, '#8A9A8E', 4, 0.8));
+  if(allBounds.length){
+    map.fitBounds(L.latLngBounds(allBounds), {padding:[30,30]});
+  }
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-all').classList.add('active');
+ 
+  let overviewPinsHtml = '<div style="position:relative; width:100%; border:1.5px solid var(--ink); margin-bottom:6px; background:var(--paper-dim); padding:4px; text-align:center;"><span style="font-family:\'Oswald\',sans-serif; font-size:9.5px; text-transform:uppercase; display:block; margin-bottom:3px; color:var(--ink);">Indice Tappe</span><div style="display:flex; flex-wrap:wrap; gap:3px; justify-content:center;">';
+  DAYS.forEach(d => {
+    overviewPinsHtml += `<button onclick="showDay(DAYS[${d.n - 1}]); document.getElementById('tab-${d.n}').scrollIntoView({behavior:'smooth'});" style="background:var(--paper); border:1px solid var(--ink); padding:1px 5px; font-family:\'Oswald\',sans-serif; font-size:9.5px; font-weight:bold; cursor:pointer;">G${d.n}</button>`;
+  });
+  overviewPinsHtml += '</div></div>';
+
+  document.getElementById('card').innerHTML = `
+    <div class="eyebrow">Sommario Generale</div>
+    <h2>L'intero raid</h2>
+    ${overviewPinsHtml}
+    <p>Seleziona un giorno dal menu laterale per evidenziare la tratta, oppure resta su "TUTTO".</p>
+    <div class="stats">
+      <div><b>10</b>Giorni</div>
+      <div><b>2.628</b>Km totali</div>
+      <div><b>4</b>Regioni</div>
+    </div>`;
+}
+
+function showDay(day){
+  DAYS.forEach(d=>{
+    if(d.n === day.n) setDayColor(d.n, '#C2542D', 6, 1);
+    else setDayColor(d.n, '#C7BFA9', 3, 0.45);
+  });
+  const l = dayLayers[day.n];
+  if(l){
+    const b = L.latLngBounds(l.markers.map(m=>m.getLatLng()));
+    map.fitBounds(b, {padding:[60,60]});
+  }
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-all').classList.remove('active');
+  document.getElementById(`tab-${day.n}`).classList.add('active');
+
+  let attractionsHtml = '';
+  if(day.attractions && day.attractions.length > 0){
+    attractionsHtml = `
+      <img src="${day.img}" alt="Tappa G${day.n}" class="card-img-preview">
+      <div class="card-section-title">Geografia e Sapori</div>
+      <ul class="card-attractions">
+        ${day.attractions.map(a => `<li>${a}</li>`).join('')}
+      </ul>
+    `;
+  }
+
+  document.getElementById('card').innerHTML = `
+    <div class="eyebrow">${day.region}</div>
+    <h2>Giorno ${day.n} · ${day.title}</h2>
+    <p>${day.desc}</p>
+    ${attractionsHtml}
+    <div class="stats">
+      <div><b>${day.km || '—'}</b>Km</div>
+      <div><b>${day.n}/10</b>Tappa</div>
+    </div>`;
+}
+
+async function init(){
+  const tabsEl = document.getElementById('tabs');
+  for(const day of DAYS){
+    await buildDay(day);
+    const tab = document.createElement('div');
+    tab.className = 'tab';
+    tab.id = `tab-${day.n}`;
+    tab.innerHTML = `<div class="swatch"></div><div class="num">G${day.n}</div><span class="km">${day.km ? day.km+'km' : 'Nave'}</span>`;
+    tab.addEventListener('click', ()=>showDay(day));
+    tabsEl.appendChild(tab);
+  }
+  document.getElementById('tab-all').addEventListener('click', showAll);
+  showAll();
+}
+init();
+</script>
+</body>
+</html> 

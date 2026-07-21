@@ -382,8 +382,8 @@ const DAYS = [
     ],
     ferry:true,
     stops:[
-      {name:"Barcellona (porto)", lat:41.3733, lng:2.1775},
-      {name:"Civitavecchia (porto)", lat:42.0942, lng:11.7955}
+      {name:"Barcellona (traghetti in mare)", lat:41.3300, lng:2.2500},
+      {name:"Civitavecchia (traghetti in mare)", lat:42.0600, lng:11.8500}
     ]
   }
 ];
@@ -406,7 +406,11 @@ function markerIcon(label, cls){
   });
 }
 
-async function fetchRoute(stops){
+async function fetchRoute(stops, isFerry){
+  if(isFerry){
+    // Restituisce direttamente le coordinate in mare aperto senza passare da OSRM (evitando il percorso stradale)
+    return stops.map(s=>[s.lat, s.lng]);
+  }
   const coords = stops.map(s=>`${s.lng},${s.lat}`).join(';');
   try{
     const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`);
@@ -420,14 +424,14 @@ async function fetchRoute(stops){
 
 async function buildDay(day){
   const isFerry = !!day.ferry;
-  const latlngs = await fetchRoute(day.stops);
+  const latlngs = await fetchRoute(day.stops, isFerry);
   latlngs.forEach(p=>allBounds.push(p));
 
   const line = L.polyline(latlngs, {
     color: '#C7BFA9',
     weight: 4,
     opacity: 0.85,
-    dashArray: isFerry ? '2 10' : null
+    dashArray: isFerry ? '6 12' : null
   }).addTo(map);
 
   const markers = day.stops.map((s,i)=>{
